@@ -24,7 +24,7 @@ if 'saved_status' not in st.session_state:
 if 'page_number' not in st.session_state:
     st.session_state['page_number'] = 0
 
-NEWS_API_KEY = 'ec48b2493593467a8947d0253d2786a2' 
+NEWS_API_KEY = 'ec48b2493593467a8947d0253d2786a2'  
 
 def fetch_news_search_topic(topic):
     try:
@@ -129,7 +129,7 @@ def display_news(list_of_news, page_number, language):
             news_data.parse()
             news_data.nlp()
         except Exception as e:
-            st.error(e)
+            st.error(f"Error processing article {news.link.text}: {e}")
             continue 
         fetch_news_poster(news_data.top_image)
         with st.expander(news.title.text):
