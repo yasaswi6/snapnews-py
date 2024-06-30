@@ -9,8 +9,9 @@ from gtts import gTTS
 import base64
 import random
 import requests
+import re
 
-nltk.download('punkt')
+nltk.download('punkt', quiet=True)
 
 st.set_page_config(page_title='SnapNews🇸🇬: News Anytime, Anywhere', page_icon='snap.png')
 
@@ -23,7 +24,7 @@ if 'saved_status' not in st.session_state:
 if 'page_number' not in st.session_state:
     st.session_state['page_number'] = 0
 
-NEWS_API_KEY = 'ec48b2493593467a8947d0253d2786a2' 
+NEWS_API_KEY = 'ec48b2493593467a8947d0253d2786a2'  
 
 def fetch_news_search_topic(topic):
     try:
@@ -31,7 +32,7 @@ def fetch_news_search_topic(topic):
         op = urlopen(Request(site, headers={'User-Agent': 'Mozilla/5.0'}))
         rd = op.read()
         op.close()
-        sp_page = soup(rd, 'xml')
+        sp_page = soup(rd, 'html.parser')
         news_list = sp_page.find_all('item')
         return news_list
     except Exception as e:
@@ -44,7 +45,7 @@ def fetch_top_news():
         op = urlopen(Request(site, headers={'User-Agent': 'Mozilla/5.0'}))
         rd = op.read()
         op.close()
-        sp_page = soup(rd, 'xml')
+        sp_page = soup(rd, 'html.parser')
         news_list = sp_page.find_all('item')
         return news_list
     except Exception as e:
@@ -57,7 +58,7 @@ def fetch_category_news(topic):
         op = urlopen(Request(site, headers={'User-Agent': 'Mozilla/5.0'}))
         rd = op.read()
         op.close()
-        sp_page = soup(rd, 'xml')
+        sp_page = soup(rd, 'html.parser')
         news_list = sp_page.find_all('item')
         return news_list
     except Exception as e:
@@ -96,7 +97,7 @@ def load_saved_articles():
 
 def text_to_speech(text, lang='en'):
     tts = gTTS(text=text, lang=lang)
-    audio_file = f"audio_{text[:10].replace(' ', '_')}.mp3"
+    audio_file = f"audio_{random.randint(1, 100000)}.mp3"
     tts.save(audio_file)
     audio_data = open(audio_file, "rb").read()
     b64 = base64.b64encode(audio_data).decode()
@@ -126,6 +127,7 @@ def display_news(list_of_news, page_number, language):
             news_data.nlp()
         except Exception as e:
             st.error(e)
+            continue  # Skip this news article if it fails to download
         fetch_news_poster(news_data.top_image)
         with st.expander(news.title.text):
             try:
@@ -175,6 +177,9 @@ def simulate_notifications():
     notification = fetch_real_breaking_news()
     st.sidebar.info(notification)
 
+def remove_emojis(input_string):
+    return re.sub(r'[^\w\s,]', '', input_string)
+
 def run():
     st.markdown("<h1 style='text-align: center;'>SnapNews🇸🇬: News Anytime, Anywhere 🌍🕒</h1>", unsafe_allow_html=True)
     image = Image.open('snap.png')
@@ -209,9 +214,9 @@ def run():
         news_list = fetch_top_news()
         display_news(news_list, st.session_state['page_number'], language_code[language])
     elif cat_op == category[2]:
-        av_topics = ['Choose Topic', '🌐 World', '🏛️ Nation', '💼 Business', '💻 Tech', '🎭 Entertainment', '⚽ Sports', '🔬 Science', '🩺 Health']
+        av_topics = ['Choose Topic', 'World', 'Nation', 'Business', 'Tech', 'Entertainment', 'Sports', 'Science', 'Health']
         st.subheader("💙 Top Picks")
-        chosen_topic = st.selectbox("Choose Your Favorite Topic", av_topics)
+        chosen_topic = st.selectbox("Choose your favourite topic", av_topics)
         if chosen_topic == av_topics[0]:
             st.warning("Please choose a topic")
         else:
@@ -226,7 +231,7 @@ def run():
         user_topic = st.text_input("Enter Your Topic🔍")
 
         if st.button("Search") and user_topic != '':
-            user_topic_pr = user_topic.replace(' ', '')
+            user_topic_pr = remove_emojis(user_topic.replace(' ', ''))
             news_list = fetch_news_search_topic(topic=user_topic_pr)
             if news_list:
                 st.subheader(f"🔍 Here are some {user_topic.capitalize()} news for you")
