@@ -1,0 +1,7 @@
+streamlit
+beautifulsoup4
+Pillow
+newspaper3k
+nltk
+lxml[html_clean]
+googletrans==4.0.0-rc1
