@@ -1,7 +1,8 @@
 streamlit
-beautifulsoup4
 Pillow
-newspaper3k
+beautifulsoup4
 nltk
-lxml[html_clean]
+newspaper3k
+gtts==2.5.1
 googletrans==4.0.0-rc1
+requests
