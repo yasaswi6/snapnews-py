@@ -6,4 +6,4 @@ newspaper3k
 gtts==2.5.1
 googletrans==4.0.0-rc1
 requests
-lxml
+lxml==4.6.3
