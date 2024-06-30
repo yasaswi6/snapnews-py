@@ -24,7 +24,7 @@ if 'saved_status' not in st.session_state:
 if 'page_number' not in st.session_state:
     st.session_state['page_number'] = 0
 
-NEWS_API_KEY = 'ec48b2493593467a8947d0253d2786a2'  
+NEWS_API_KEY = 'ec48b2493593467a8947d0253d2786a2' 
 
 def fetch_news_search_topic(topic):
     try:
@@ -120,6 +120,9 @@ def display_news(list_of_news, page_number, language):
     for i, news in enumerate(news_to_display):
         index = start_index + i
         st.write(f'**({index + 1}) {news.title.text}**')
+        if not news.link or not news.link.text.startswith('http'):
+            st.warning(f"Skipping article with invalid URL: {news.link.text}")
+            continue
         news_data = Article(news.link.text)
         try:
             news_data.download()
@@ -127,7 +130,7 @@ def display_news(list_of_news, page_number, language):
             news_data.nlp()
         except Exception as e:
             st.error(e)
-            continue  # Skip this news article if it fails to download
+            continue 
         fetch_news_poster(news_data.top_image)
         with st.expander(news.title.text):
             try:
