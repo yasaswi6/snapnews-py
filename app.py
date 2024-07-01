@@ -130,7 +130,7 @@ def display_news(list_of_news, page_number, language):
             news_data.nlp()
         except Exception as e:
             st.error(f"Error processing article {news.link.text}: {e}")
-            continue 
+            continue  
         fetch_news_poster(news_data.top_image)
         with st.expander(news.title.text):
             try:
@@ -223,9 +223,10 @@ def run():
         if chosen_topic == av_topics[0]:
             st.warning("Please choose a topic")
         else:
-            news_list = fetch_category_news(chosen_topic.split()[1])
+            chosen_topic_keyword = chosen_topic.split()[-1] 
+            news_list = fetch_category_news(chosen_topic_keyword)
             if news_list:
-                st.subheader(f"💙 Here are some {chosen_topic.split()[1]} news for you")
+                st.subheader(f"💙 Here are some {chosen_topic_keyword} news for you")
                 display_news(news_list, st.session_state['page_number'], language_code[language])
             else:
                 st.error(f"No news found for {chosen_topic}")
