@@ -54,7 +54,7 @@ def fetch_top_news():
 
 def fetch_category_news(topic):
     try:
-        site = f'https://news.google.com/news/rss/headlines/section/topic/{topic}'
+        site = f'https://news.google.com/news/rss/headlines/section/topic/{topic.upper()}'
         op = urlopen(Request(site, headers={'User-Agent': 'Mozilla/5.0'}))
         rd = op.read()
         op.close()
@@ -130,7 +130,7 @@ def display_news(list_of_news, page_number, language):
             news_data.nlp()
         except Exception as e:
             st.error(f"Error processing article {news.link.text}: {e}")
-            continue  
+            continue 
         fetch_news_poster(news_data.top_image)
         with st.expander(news.title.text):
             try:
@@ -217,13 +217,13 @@ def run():
         news_list = fetch_top_news()
         display_news(news_list, st.session_state['page_number'], language_code[language])
     elif cat_op == category[2]:
-        av_topics = ['Choose Topic', 'World', 'Nation', 'Business', 'Tech', 'Entertainment', 'Sports', 'Science', 'Health']
+        av_topics = ['Choose Topic', '🌐 World', '🏛️ Nation', '💼 Business', '💻 Tech', '🎭 Entertainment', '⚽ Sports', '🔬 Science', '🩺 Health']
         st.subheader("💙 Top Picks")
         chosen_topic = st.selectbox("Choose your favourite topic", av_topics)
         if chosen_topic == av_topics[0]:
             st.warning("Please choose a topic")
         else:
-            chosen_topic_keyword = chosen_topic.split()[-1] 
+            chosen_topic_keyword = chosen_topic.split()[-1]  
             news_list = fetch_category_news(chosen_topic_keyword)
             if news_list:
                 st.subheader(f"💙 Here are some {chosen_topic_keyword} news for you")
