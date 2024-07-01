@@ -11,7 +11,7 @@ import random
 import requests
 import re
 
-nltk.download('punkt', quiet=True)
+nltk.download('punkt')
 
 st.set_page_config(page_title='SnapNews🇸🇬: News Anytime, Anywhere', page_icon='snap.png')
 
@@ -32,7 +32,7 @@ def fetch_news_search_topic(topic):
         op = urlopen(Request(site, headers={'User-Agent': 'Mozilla/5.0'}))
         rd = op.read()
         op.close()
-        sp_page = soup(rd, 'html.parser')
+        sp_page = soup(rd, 'xml')
         news_list = sp_page.find_all('item')
         return news_list
     except Exception as e:
@@ -45,7 +45,7 @@ def fetch_top_news():
         op = urlopen(Request(site, headers={'User-Agent': 'Mozilla/5.0'}))
         rd = op.read()
         op.close()
-        sp_page = soup(rd, 'html.parser')
+        sp_page = soup(rd, 'xml')
         news_list = sp_page.find_all('item')
         return news_list
     except Exception as e:
@@ -58,7 +58,7 @@ def fetch_category_news(topic):
         op = urlopen(Request(site, headers={'User-Agent': 'Mozilla/5.0'}))
         rd = op.read()
         op.close()
-        sp_page = soup(rd, 'html.parser')
+        sp_page = soup(rd, 'xml')
         news_list = sp_page.find_all('item')
         return news_list
     except Exception as e:
@@ -97,7 +97,7 @@ def load_saved_articles():
 
 def text_to_speech(text, lang='en'):
     tts = gTTS(text=text, lang=lang)
-    audio_file = f"audio_{random.randint(1, 100000)}.mp3"
+    audio_file = f"audio_{text[:10].replace(' ', '_')}.mp3"
     tts.save(audio_file)
     audio_data = open(audio_file, "rb").read()
     b64 = base64.b64encode(audio_data).decode()
