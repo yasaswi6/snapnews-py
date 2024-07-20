@@ -71,7 +71,8 @@ def fetch_news_poster(poster_link):
         raw_data = u.read()
         image = Image.open(io.BytesIO(raw_data))
         st.image(image, use_column_width=True)
-    except:
+    except Exception as e:
+        st.error(f"Error fetching image: {e}")
         image = Image.open('snap.png')
         st.image(image, use_column_width=True)
 
@@ -138,7 +139,7 @@ def display_news(list_of_news, page_number, language):
             except Exception as e:
                 summary = f"Error in translation: {e}"
             st.markdown(f"<h6 style='text-align: justify;'>{summary}</h6>", unsafe_allow_html=True)
-            st.markdown(f"[Read more at {news.source.text}...]({news.link.text})")
+            st.markdown(f"[Read more at {news.source_url}]({news.link.text})")
             audio_html = text_to_speech(summary)
             st.markdown(audio_html, unsafe_allow_html=True)
 
