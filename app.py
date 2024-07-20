@@ -132,14 +132,14 @@ def display_news(list_of_news, page_number, language):
         except Exception as e:
             st.error(f"Error processing article {news.link.text}: {e}")
             continue 
-        fetch_news_poster(news_data.top_image)
+        fetch_news_poster(news_data.top_image if news_data.top_image else 'snap.png')
         with st.expander(news.title.text):
             try:
                 summary = translator.translate(news_data.summary, dest=language).text if news_data.summary else "No summary available."
             except Exception as e:
                 summary = f"Error in translation: {e}"
             st.markdown(f"<h6 style='text-align: justify;'>{summary}</h6>", unsafe_allow_html=True)
-            st.markdown(f"[Read more at {news.source_url}]({news.link.text})")
+            st.markdown(f"[Read more at {news_data.source_url}]({news.link.text})")
             audio_html = text_to_speech(summary)
             st.markdown(audio_html, unsafe_allow_html=True)
 
