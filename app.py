@@ -24,7 +24,7 @@ if 'saved_status' not in st.session_state:
 if 'page_number' not in st.session_state:
     st.session_state['page_number'] = 0
 
-NEWS_API_KEY = 'ec48b2493593467a8947d0253d2786a2'  
+NEWS_API_KEY = 'ec48b2493593467a8947d0253d2786a2'
 
 def fetch_news_search_topic(topic):
     try:
@@ -143,7 +143,8 @@ def display_news(list_of_news, page_number, language):
             except Exception as e:
                 summary_translated = f"Error in translation: {e}"
             st.markdown(f"<h6 style='text-align: justify;'>{summary_translated}</h6>", unsafe_allow_html=True)
-            st.markdown(f"[Read more at {news_data.source_url}]({news.link.text})")
+            source_url = news_data.source_url if news_data.source_url else news.link.text
+            st.markdown(f"[Read more at source]({source_url})")
             audio_html = text_to_speech(summary_translated)
             st.markdown(audio_html, unsafe_allow_html=True)
 
