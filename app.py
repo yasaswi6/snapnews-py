@@ -132,15 +132,19 @@ def display_news(list_of_news, page_number, language):
         except Exception as e:
             st.error(f"Error processing article {news.link.text}: {e}")
             continue 
-        fetch_news_poster(news_data.top_image if news_data.top_image else 'snap.png')
+
+        image_url = news_data.top_image if news_data.top_image else 'snap.png'
+        fetch_news_poster(image_url)
+
         with st.expander(news.title.text):
             try:
-                summary = translator.translate(news_data.summary, dest=language).text if news_data.summary else "No summary available."
+                summary = news_data.summary if news_data.summary else "No summary available."
+                summary_translated = translator.translate(summary, dest=language).text
             except Exception as e:
-                summary = f"Error in translation: {e}"
-            st.markdown(f"<h6 style='text-align: justify;'>{summary}</h6>", unsafe_allow_html=True)
+                summary_translated = f"Error in translation: {e}"
+            st.markdown(f"<h6 style='text-align: justify;'>{summary_translated}</h6>", unsafe_allow_html=True)
             st.markdown(f"[Read more at {news_data.source_url}]({news.link.text})")
-            audio_html = text_to_speech(summary)
+            audio_html = text_to_speech(summary_translated)
             st.markdown(audio_html, unsafe_allow_html=True)
 
             if st.session_state['saved_status'].get(index, False):
@@ -148,7 +152,7 @@ def display_news(list_of_news, page_number, language):
                     unsave_article(index, news.title.text)
             else:
                 if st.button("Save", key=f"save_{index}"):
-                    save_article(index, news.title.text, news.link.text, summary)
+                    save_article(index, news.title.text, news.link.text, summary_translated)
 
             st.write("---")
             st.write("Share on:")
