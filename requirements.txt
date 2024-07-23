@@ -7,3 +7,5 @@ gtts==2.5.1
 googletrans==4.0.0-rc1
 requests
 lxml[html_clean]
+transformers==4.18.0
+torch==1.11.0

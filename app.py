@@ -4,13 +4,14 @@ from bs4 import BeautifulSoup as soup
 from urllib.request import urlopen, Request
 from newspaper import Article
 import io
-import nltk
 from gtts import gTTS
 import base64
 import random
 import requests
-
-nltk.download('punkt')
+import re
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lsa import LsaSummarizer
 
 st.set_page_config(page_title='SnapNews🇸🇬: News Anytime, Anywhere', page_icon='snap.png')
 
@@ -23,11 +24,11 @@ if 'saved_status' not in st.session_state:
 if 'page_number' not in st.session_state:
     st.session_state['page_number'] = 0
 
-NEWS_API_KEY = 'ec48b2493593467a8947d0253d2786a2' 
+NEWS_API_KEY = 'ec48b2493593467a8947d0253d2786a2'
 
 def fetch_news_search_topic(topic):
     try:
-        site = f'https://news.google.com/rss/search?q={topic}'
+        site = f'https://news.yahoo.com/rss/search?p={topic}'
         op = urlopen(Request(site, headers={'User-Agent': 'Mozilla/5.0'}))
         rd = op.read()
         op.close()
@@ -40,7 +41,7 @@ def fetch_news_search_topic(topic):
 
 def fetch_top_news():
     try:
-        site = 'https://news.google.com/news/rss'
+        site = 'https://www.yahoo.com/news/rss'
         op = urlopen(Request(site, headers={'User-Agent': 'Mozilla/5.0'}))
         rd = op.read()
         op.close()
@@ -53,7 +54,7 @@ def fetch_top_news():
 
 def fetch_category_news(topic):
     try:
-        site = f'https://news.google.com/news/rss/headlines/section/topic/{topic}'
+        site = f'https://news.yahoo.com/rss/topics/{topic.lower()}'
         op = urlopen(Request(site, headers={'User-Agent': 'Mozilla/5.0'}))
         rd = op.read()
         op.close()
@@ -70,7 +71,8 @@ def fetch_news_poster(poster_link):
         raw_data = u.read()
         image = Image.open(io.BytesIO(raw_data))
         st.image(image, use_column_width=True)
-    except:
+    except Exception as e:
+        st.error(f"Error fetching image: {e}")
         image = Image.open('snap.png')
         st.image(image, use_column_width=True)
 
@@ -108,6 +110,34 @@ def text_to_speech(text, lang='en'):
     """
     return audio_html
 
+def summarize_text(text):
+    parser = PlaintextParser.from_string(text, Tokenizer("english"))
+    summarizer = LsaSummarizer()
+    summary = summarizer(parser.document, 2)  # Summarize to 2 sentences
+    return " ".join([str(sentence) for sentence in summary])
+
+def extract_article_text(url):
+    try:
+        article = Article(url)
+        article.download()
+        article.parse()
+        return article.text, article.top_image
+    except Exception as e:
+        st.error(f"Newspaper library failed to extract article: {e}")
+        try:
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            req = Request(url, headers=headers)
+            page = urlopen(req).read()
+            page_soup = soup(page, 'html.parser')
+            paragraphs = page_soup.find_all('p')
+            text = ' '.join([para.text for para in paragraphs])
+            top_image = page_soup.find('meta', property='og:image')
+            top_image = top_image['content'] if top_image else 'snap.png'
+            return text, top_image
+        except Exception as e:
+            st.error(f"BeautifulSoup failed to extract article: {e}")
+            return None, 'snap.png'
+
 def display_news(list_of_news, page_number, language):
     from googletrans import Translator
     translator = Translator()
@@ -119,22 +149,27 @@ def display_news(list_of_news, page_number, language):
     for i, news in enumerate(news_to_display):
         index = start_index + i
         st.write(f'**({index + 1}) {news.title.text}**')
-        news_data = Article(news.link.text)
+        if not news.link or not news.link.text.startswith('http'):
+            st.warning(f"Skipping article with invalid URL: {news.link.text}")
+            continue
         try:
-            news_data.download()
-            news_data.parse()
-            news_data.nlp()
+            article_text, top_image = extract_article_text(news.link.text)
+            if article_text:
+                summary = summarize_text(article_text)
+                summary_translated = translator.translate(summary, dest=language).text
+            else:
+                summary_translated = "No content available for summarization."
         except Exception as e:
-            st.error(e)
-        fetch_news_poster(news_data.top_image)
+            st.error(f"Error processing article {news.link.text}: {e}")
+            continue
+
+        fetch_news_poster(top_image)
+
         with st.expander(news.title.text):
-            try:
-                summary = translator.translate(news_data.summary, dest=language).text if news_data.summary else "No summary available."
-            except Exception as e:
-                summary = f"Error in translation: {e}"
-            st.markdown(f"<h6 style='text-align: justify;'>{summary}</h6>", unsafe_allow_html=True)
-            st.markdown(f"[Read more at {news.source.text}...]({news.link.text})")
-            audio_html = text_to_speech(summary)
+            st.markdown(f"<h6 style='text-align: justify;'>{summary_translated}</h6>", unsafe_allow_html=True)
+            source_url = news.link.text
+            st.markdown(f"[Read more at source]({source_url})")
+            audio_html = text_to_speech(summary_translated)
             st.markdown(audio_html, unsafe_allow_html=True)
 
             if st.session_state['saved_status'].get(index, False):
@@ -142,7 +177,7 @@ def display_news(list_of_news, page_number, language):
                     unsave_article(index, news.title.text)
             else:
                 if st.button("Save", key=f"save_{index}"):
-                    save_article(index, news.title.text, news.link.text, summary)
+                    save_article(index, news.title.text, news.link.text, summary_translated)
 
             st.write("---")
             st.write("Share on:")
@@ -174,6 +209,9 @@ def fetch_real_breaking_news():
 def simulate_notifications():
     notification = fetch_real_breaking_news()
     st.sidebar.info(notification)
+
+def remove_emojis(input_string):
+    return re.sub(r'[^\w\s,]', '', input_string)
 
 def run():
     st.markdown("<h1 style='text-align: center;'>SnapNews🇸🇬: News Anytime, Anywhere 🌍🕒</h1>", unsafe_allow_html=True)
@@ -211,13 +249,14 @@ def run():
     elif cat_op == category[2]:
         av_topics = ['Choose Topic', '🌐 World', '🏛️ Nation', '💼 Business', '💻 Tech', '🎭 Entertainment', '⚽ Sports', '🔬 Science', '🩺 Health']
         st.subheader("💙 Top Picks")
-        chosen_topic = st.selectbox("Choose Your Favorite Topic", av_topics)
+        chosen_topic = st.selectbox("Choose your favourite topic", av_topics)
         if chosen_topic == av_topics[0]:
             st.warning("Please choose a topic")
         else:
-            news_list = fetch_category_news(chosen_topic.split()[1])
+            chosen_topic_keyword = chosen_topic.split()[-1]
+            news_list = fetch_category_news(chosen_topic_keyword)
             if news_list:
-                st.subheader(f"💙 Here are some {chosen_topic.split()[1]} news for you")
+                st.subheader(f"💙 Here are some {chosen_topic_keyword} news for you")
                 display_news(news_list, st.session_state['page_number'], language_code[language])
             else:
                 st.error(f"No news found for {chosen_topic}")
@@ -226,7 +265,7 @@ def run():
         user_topic = st.text_input("Enter Your Topic🔍")
 
         if st.button("Search") and user_topic != '':
-            user_topic_pr = user_topic.replace(' ', '')
+            user_topic_pr = remove_emojis(user_topic.replace(' ', ''))
             news_list = fetch_news_search_topic(topic=user_topic_pr)
             if news_list:
                 st.subheader(f"🔍 Here are some {user_topic.capitalize()} news for you")
