@@ -21,7 +21,7 @@ def login():
         if st.button('Login'):
             try:
                 user = auth.get_user_by_email(email)
-                st.success(f'Login Successful for {user.email}')
+                st.success(f'Login Successful for {user.email}. Press again to continue')
                 st.session_state['logged_in'] = True
                 st.session_state['username'] = user.display_name if user.display_name else user.email
                 st.session_state['current_page'] = 'page1'
@@ -61,7 +61,8 @@ def main():
         page1()
 
 def page1():
-    st.write(f"Hello, {st.session_state['username']}! Welcome to SnapNews.")
+    import page1
+    page1.main( st.session_state['username'])
     if st.button("Log out"):
         st.session_state['logged_in'] = False
         st.session_state['current_page'] = 'login'
