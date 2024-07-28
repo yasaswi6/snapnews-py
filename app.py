@@ -1,12 +1,8 @@
 import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, auth
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize, sent_tokenize
 
-nltk.download('punkt')
-nltk.download('stopwords')
+
 
 st.set_page_config(page_title='SnapNews🇸🇬: News Anytime, Anywhere', page_icon='snap.png')
 
