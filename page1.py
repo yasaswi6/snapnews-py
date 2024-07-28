@@ -12,6 +12,12 @@ import re
 import os
 import pandas as pd
 import csv
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize, sent_tokenize
+
+nltk.download('punkt')
+nltk.download('stopwords')
 
 if 'saved_articles' not in st.session_state:
     st.session_state['saved_articles'] = []
@@ -21,6 +27,9 @@ if 'saved_status' not in st.session_state:
 
 if 'page_number' not in st.session_state:
     st.session_state['page_number'] = 0
+
+if 'search_page_number' not in st.session_state:
+    st.session_state['search_page_number'] = 0
 
 NEWS_API_KEY = 'ec48b2493593467a8947d0253d2786a2'
 COMMENTS_CSV = 'comments.csv'
@@ -88,7 +97,7 @@ def extract_article_text(url):
         article = Article(url)
         article.download()
         article.parse()
-        return article.text[:60] + '...', article.top_image
+        return article.text, article.top_image
     except Exception as e:
         st.error(f"Newspaper library failed to extract article: {e}")
         try:
@@ -100,11 +109,47 @@ def extract_article_text(url):
             text = ' '.join([para.text for para in paragraphs])
             top_image = page_soup.find('meta', property='og:image')
             top_image = top_image['content'] if top_image else 'snap.png'
-            return text[:60] + '...', top_image
+            return text, top_image
         except Exception as e:
             st.error(f"BeautifulSoup failed to extract article: {e}")
             return None, 'snap.png'
 
+def summarize_text(text):
+    stop_words = set(stopwords.words("english"))
+    words = word_tokenize(text)
+
+    freq_table = dict()
+    for word in words:
+        word = word.lower()
+        if word in stop_words:
+            continue
+        if word in freq_table:
+            freq_table[word] += 1
+        else:
+            freq_table[word] = 1
+
+    sentences = sent_tokenize(text)
+    sentence_value = dict()
+
+    for sentence in sentences:
+        for word, freq in freq_table.items():
+            if word in sentence.lower():
+                if sentence in sentence_value:
+                    sentence_value[sentence] += freq
+                else:
+                    sentence_value[sentence] = freq
+
+    sum_values = 0
+    for sentence in sentence_value:
+        sum_values += sentence_value[sentence]
+
+    average = int(sum_values / len(sentence_value))
+
+    summary = ''
+    for sentence in sentences:
+        if sentence in sentence_value and sentence_value[sentence] > (1.5 * average):
+            summary += " " + sentence
+    return summary
 
 def display_news(list_of_news, page_number, language, s):
     from googletrans import Translator
@@ -129,7 +174,7 @@ def display_news(list_of_news, page_number, language, s):
         try:
             article_text, top_image = extract_article_text(link)
             if article_text:
-                summary = article_text
+                summary = summarize_text(article_text)
                 summary_translated = translator.translate(summary, dest=language).text
             else:
                 summary_translated = "No content available for summarization."
@@ -178,10 +223,9 @@ def display_news(list_of_news, page_number, language, s):
             new_comment = st.text_area(f"Add a comment for article {index + 1}", key=f"comment_{index}")
             if st.button("Submit", key=f"submit_{index}"):
                 add_comment(link, new_comment, s)
-                
 
 def display_search_news(list_of_news, page_number):
-    items_per_page = 10
+    items_per_page = 5
     start_index = page_number * items_per_page
     end_index = start_index + items_per_page
     news_to_display = list_of_news[start_index:end_index]
@@ -195,11 +239,34 @@ def display_search_news(list_of_news, page_number):
 
         st.markdown(f"### {index + 1}. {title}")
         st.markdown(f"*Source: {source}*")
+
+        try:
+            article_text, top_image = extract_article_text(link)
+            if article_text:
+                summary = summarize_text(article_text)
+                st.markdown(f"<p>{summary}</p>", unsafe_allow_html=True)
+            else:
+                st.markdown("<p>No content available for summarization.</p>", unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Error processing article {link}: {e}")
+            continue
+
         st.markdown(f"[Read more at {source}]({link})")
         st.write("---")
 
     col1, col2, col3 = st.columns([1, 1, 1])
 
+    if page_number > 0:
+        with col1:
+            if st.button("Previous", key="prev_search"):
+                st.session_state['search_page_number'] -= 1
+                st.experimental_rerun()
+
+    if end_index < len(list_of_news):
+        with col3:
+            if st.button("Next", key="next_search"):
+                st.session_state['search_page_number'] += 1
+                st.experimental_rerun()
 
 def fetch_real_breaking_news():
     url = f'https://newsapi.org/v2/top-headlines?country=us&apiKey={NEWS_API_KEY}'
@@ -341,6 +408,5 @@ def main(s):
 
     load_saved_articles()
 
-
-
-
+if __name__ == "__main__":
+    main()
