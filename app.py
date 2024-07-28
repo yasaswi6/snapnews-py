@@ -62,9 +62,13 @@ def main():
         page1()
 
 def page1():
-    import page1
-    page1.main(st.session_state['username'])
-    
+    st.write(f"Hello, {st.session_state['username']}! Welcome to SnapNews.")
+    st.button("Log out", on_click=logout)
+
+def logout():
+    st.session_state['logged_in'] = False
+    st.session_state['current_page'] = 'login'
+    st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
