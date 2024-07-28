@@ -15,6 +15,7 @@ import csv
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize, sent_tokenize
+
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
@@ -24,7 +25,6 @@ try:
     nltk.data.find('corpora/stopwords')
 except LookupError:
     nltk.download('stopwords', quiet=True)
-
 
 if 'saved_articles' not in st.session_state:
     st.session_state['saved_articles'] = []
@@ -104,9 +104,11 @@ def extract_article_text(url):
         article = Article(url)
         article.download()
         article.parse()
+        if not article.text:  # Check if article text is None or empty
+            raise ValueError("Article text is empty")
         return article.text, article.top_image
     except Exception as e:
-        st.error(f"Newspaper library failed to extract article: {e}")
+        st.warning(f"Newspaper library failed to extract article: {e}")
         try:
             headers = {'User-Agent': 'Mozilla/5.0'}
             req = Request(url, headers=headers)
@@ -116,9 +118,11 @@ def extract_article_text(url):
             text = ' '.join([para.text for para in paragraphs])
             top_image = page_soup.find('meta', property='og:image')
             top_image = top_image['content'] if top_image else 'snap.png'
+            if not text:  # Check if text is None or empty
+                raise ValueError("Parsed text is empty")
             return text, top_image
         except Exception as e:
-            st.error(f"BeautifulSoup failed to extract article: {e}")
+            st.warning(f"BeautifulSoup failed to extract article: {e}")
             return None, 'snap.png'
 
 def summarize_text(text):
@@ -157,7 +161,6 @@ def summarize_text(text):
         if sentence in sentence_value and sentence_value[sentence] > (1.5 * average):
             summary += " " + sentence
     return summary
-
 def display_news(list_of_news, page_number, language, s):
     from googletrans import Translator
     translator = Translator()
@@ -180,11 +183,11 @@ def display_news(list_of_news, page_number, language, s):
 
         try:
             article_text, top_image = extract_article_text(link)
-            if article_text:
-                summary = summarize_text(article_text)
-                summary_translated = translator.translate(summary, dest=language).text
-            else:
-                summary_translated = "No content available for summarization."
+            if not article_text:  # Skip articles with NoneType text
+                st.warning(f"Skipping article with no content: {link}")
+                continue
+            summary = summarize_text(article_text)
+            summary_translated = translator.translate(summary, dest=language).text
         except Exception as e:
             st.error(f"Error processing article {link}: {e}")
             continue
@@ -231,6 +234,19 @@ def display_news(list_of_news, page_number, language, s):
             if st.button("Submit", key=f"submit_{index}"):
                 add_comment(link, new_comment, s)
 
+    col1, col2, col3 = st.columns([1, 1, 1])
+
+    if page_number > 0:
+        with col1:
+            if st.button("Previous", key="prev"):
+                st.session_state['page_number'] -= 1
+                st.rerun()
+
+    if end_index < len(list_of_news):
+        with col3:
+            if st.button("Next", key="next"):
+                st.session_state['page_number'] += 1
+                st.rerun()
 def display_search_news(list_of_news, page_number):
     items_per_page = 5
     start_index = page_number * items_per_page
@@ -267,13 +283,13 @@ def display_search_news(list_of_news, page_number):
         with col1:
             if st.button("Previous", key="prev_search"):
                 st.session_state['search_page_number'] -= 1
-                st.experimental_rerun()
+                st.rerun()
 
     if end_index < len(list_of_news):
         with col3:
             if st.button("Next", key="next_search"):
                 st.session_state['search_page_number'] += 1
-                st.experimental_rerun()
+                st.rerun()
 
 def fetch_real_breaking_news():
     url = f'https://newsapi.org/v2/top-headlines?country=us&apiKey={NEWS_API_KEY}'
