@@ -173,11 +173,10 @@ def display_news(list_of_news, page_number, language, s):
 
         try:
             article_text, top_image = extract_article_text(link)
-            if article_text:
-                summary = summarize_text(article_text)
-                summary_translated = translator.translate(summary, dest=language).text
-            else:
-                summary_translated = "No content available for summarization."
+            if not article_text:
+                continue
+            summary = summarize_text(article_text)
+            summary_translated = translator.translate(summary, dest=language).text
         except Exception as e:
             st.error(f"Error processing article {link}: {e}")
             continue
@@ -242,11 +241,10 @@ def display_search_news(list_of_news, page_number):
 
         try:
             article_text, top_image = extract_article_text(link)
-            if article_text:
-                summary = summarize_text(article_text)
-                st.markdown(f"<p>{summary}</p>", unsafe_allow_html=True)
-            else:
-                st.markdown("<p>No content available for summarization.</p>", unsafe_allow_html=True)
+            if not article_text:
+                continue
+            summary = summarize_text(article_text)
+            st.markdown(f"<p>{summary}</p>", unsafe_allow_html=True)
         except Exception as e:
             st.error(f"Error processing article {link}: {e}")
             continue
@@ -327,7 +325,7 @@ def load_comments(article_url):
         st.error(f"Error loading comments: {e}")
         return []
 
-def main(s):
+def main():
     if 'saved_articles' not in st.session_state:
         st.session_state['saved_articles'] = []
 
@@ -399,7 +397,7 @@ def main(s):
             user_topic_pr = remove_emojis(user_topic.replace(' ', ''))
             news_list = fetch_rss_feed(f"https://news.google.com/rss/search?q={user_topic_pr}&hl=en-IN&gl=IN&ceid=IN:en")
             if news_list:
-                st.subheader(f"🔍 Here is top 10 {user_topic.capitalize()} news for you")
+                st.subheader(f"🔍 Here are some {user_topic.capitalize()} news for you")
                 display_search_news(news_list, st.session_state['search_page_number'])
             else:
                 st.error(f"No news found for {user_topic}")
