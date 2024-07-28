@@ -62,7 +62,7 @@ def main():
 
 def pa():
     import page1
-    page1.main( \st.session_state['username'])
+    page1.main( st.session_state['username'])
     if st.button("Log out"):
         st.session_state['logged_in'] = False
         st.session_state['current_page'] = 'login'
