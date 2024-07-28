@@ -24,7 +24,7 @@ def login():
                 st.success(f'Login Successful for {user.email}')
                 st.session_state['logged_in'] = True
                 st.session_state['username'] = user.display_name if user.display_name else user.email
-                st.session_state['current_page'] = 'continue'
+                st.session_state['current_page'] = 'page1'
             except firebase_admin.auth.UserNotFoundError:
                 st.warning('Login Failed: User not found.')
             except Exception as e:
@@ -57,15 +57,8 @@ def main():
 
     if st.session_state['current_page'] == 'login':
         login()
-    elif st.session_state['current_page'] == 'continue' and st.session_state['logged_in']:
-        continue_page()
     elif st.session_state['current_page'] == 'page1' and st.session_state['logged_in']:
         page1()
-
-def continue_page():
-    if st.button("Continue"):
-        st.session_state['current_page'] = 'page1'
-        st.experimental_rerun()
 
 def page1():
     st.write(f"Hello, {st.session_state['username']}! Welcome to SnapNews.")
