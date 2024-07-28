@@ -1,11 +1,2 @@
-streamlit==1.2.0
-Pillow==8.4.0
-beautifulsoup4==4.10.0
-newspaper3k==0.2.8
-gTTS==2.2.3
-sumy==0.8.1
-tokenizers==0.10.3
-requests==2.26.0
-wheel
-pandas==1.3.4
-googletrans==4.0.0-rc1
+streamlit
+firebase-admin
