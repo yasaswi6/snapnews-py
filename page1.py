@@ -181,7 +181,7 @@ def display_news(list_of_news, page_number, language, s):
                 
 
 def display_search_news(list_of_news, page_number):
-    items_per_page = 15
+    items_per_page = 10
     start_index = page_number * items_per_page
     end_index = start_index + items_per_page
     news_to_display = list_of_news[start_index:end_index]
@@ -190,9 +190,16 @@ def display_search_news(list_of_news, page_number):
         index = start_index + i
         title = news.title.text if news.title else "No title"
         link = news.link.text if news.link else "No link"
-        
-        st.write(f'**({index + 1}) {title}**')
-        st.markdown(f"[Read more...]({link})")
+        source_tag = news.find('source')
+        source = "Unknown source" if source_tag is None else source_tag.text.strip()
+
+        st.markdown(f"### {index + 1}. {title}")
+        st.markdown(f"*Source: {source}*")
+        st.markdown(f"[Read more at {source}]({link})")
+        st.write("---")
+
+    col1, col2, col3 = st.columns([1, 1, 1])
+
 
 def fetch_real_breaking_news():
     url = f'https://newsapi.org/v2/top-headlines?country=us&apiKey={NEWS_API_KEY}'
@@ -263,6 +270,9 @@ def main(s):
     if 'page_number' not in st.session_state:
         st.session_state['page_number'] = 0
 
+    if 'search_page_number' not in st.session_state:
+        st.session_state['search_page_number'] = 0
+
     st.markdown("<h1 style='text-align: center;'>SnapNews🇸🇬: News Anytime, Anywhere 🌍🕒</h1>", unsafe_allow_html=True)
     image = Image.open('snap.png')
 
@@ -283,10 +293,6 @@ def main(s):
     category = ['--Select--', '🔥 Hot News', '💙 Top Picks', '🔍 Explore']
     cat_op = st.selectbox('Choose Your News', category)
 
-    language_options = ['English', 'Malay', 'Tamil', 'Chinese']
-    language = st.selectbox('Select Language', language_options)
-    language_code = {'English': 'en', 'Malay': 'ms', 'Tamil': 'ta', 'Chinese': 'zh-cn'}
-
     news_list = []
 
     if cat_op == category[0]:
@@ -294,7 +300,7 @@ def main(s):
     elif cat_op == category[1]:
         st.subheader("🔥 Hot News")
         news_list = fetch_rss_feed('https://www.yahoo.com/news/rss')
-        display_news(news_list, st.session_state['page_number'], language_code[language], st.session_state['username'])
+        display_news(news_list, st.session_state['page_number'], 'en', st.session_state['username'])
     elif cat_op == category[2]:
         av_topics = ['Choose Topic', '💼 Business', '💻 Tech', '⚖️ Politics', '🌍 World', '⚽ Sports']
         st.subheader("💙 Top Picks")
@@ -315,7 +321,7 @@ def main(s):
             
             if news_list:
                 st.subheader(f"💙 Here are some {chosen_topic.split()[-1]} news for you")
-                display_news(news_list, st.session_state['page_number'], language_code[language], st.session_state['username'])
+                display_news(news_list, st.session_state['page_number'], 'en', st.session_state['username'])
             else:
                 st.error(f"No news found for {chosen_topic}")
 
@@ -326,21 +332,15 @@ def main(s):
             user_topic_pr = remove_emojis(user_topic.replace(' ', ''))
             news_list = fetch_rss_feed(f"https://news.google.com/rss/search?q={user_topic_pr}&hl=en-IN&gl=IN&ceid=IN:en")
             if news_list:
-                st.subheader(f"🔍 Here are some {user_topic.capitalize()} news for you")
-                display_search_news(news_list, st.session_state['page_number'])
+                st.subheader(f"🔍 Here is top 10 {user_topic.capitalize()} news for you")
+                display_search_news(news_list, st.session_state['search_page_number'])
             else:
                 st.error(f"No news found for {user_topic}")
         else:
             st.warning("Please enter a topic name to search🔍")
 
-    if news_list:
-        if st.session_state['page_number'] > 0:
-            if st.button("Previous", key="prev"):
-                st.session_state['page_number'] -= 1
-
-        if st.session_state['page_number'] < (len(news_list) // 5):
-            if st.button("Next", key="next"):
-                st.session_state['page_number'] += 1
-
     load_saved_articles()
+
+
+
 
