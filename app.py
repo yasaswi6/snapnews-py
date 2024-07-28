@@ -6,7 +6,7 @@ st.set_page_config(page_title='SnapNews🇸🇬: News Anytime, Anywhere', page_i
 
 # Initialize Firebase Admin SDK
 if not firebase_admin._apps:
-    cred = credentials.Certificate('snapnews-43720-firebase-adminsdk-dk2m1-2a95e02a22.json')
+    cred = credentials.Certificate('')
     firebase_admin.initialize_app(cred)
 
 def login():
