@@ -58,11 +58,11 @@ def main():
     if st.session_state['current_page'] == 'login':
         login()
     elif st.session_state['current_page'] == 'page1' and st.session_state['logged_in']:
-        page1()
+        pa()
 
-def page1():
+def pa():
     import page1
-    page1.main( st.session_state['username'])
+    page1.main( \st.session_state['username'])
     if st.button("Log out"):
         st.session_state['logged_in'] = False
         st.session_state['current_page'] = 'login'
