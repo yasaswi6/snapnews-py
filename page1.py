@@ -105,6 +105,7 @@ def extract_article_text(url):
             st.error(f"BeautifulSoup failed to extract article: {e}")
             return None, 'snap.png'
 
+
 def display_news(list_of_news, page_number, language, s):
     from googletrans import Translator
     translator = Translator()
@@ -117,9 +118,10 @@ def display_news(list_of_news, page_number, language, s):
         index = start_index + i
         title = news.title.text if news.title else "No title"
         link = news.link.text if news.link else "No link"
-        source = news.source if news.source else "Unknown source"
+        source_tag = news.source if news.source else None
+        source = "Unknown source" if source_tag is None else source_tag.text.strip()
         
-        st.write(f'**({index + 1}) {title}** - {source}')
+        st.write(f'**({index + 1}) {title}**')
         if not link or not link.startswith('http'):
             st.warning(f"Skipping article with invalid URL: {link}")
             continue
@@ -139,8 +141,7 @@ def display_news(list_of_news, page_number, language, s):
 
         with st.expander(title):
             st.markdown(f"<h6 style='text-align: justify;'>{summary_translated}</h6>", unsafe_allow_html=True)
-            source_url = link
-            st.markdown(f"[Read more at source]({source_url})")
+            st.markdown(f"[Read more at {source}]({link})")
             audio_html = text_to_speech(summary_translated)
             st.markdown(audio_html, unsafe_allow_html=True)
 
@@ -177,7 +178,21 @@ def display_news(list_of_news, page_number, language, s):
             new_comment = st.text_area(f"Add a comment for article {index + 1}", key=f"comment_{index}")
             if st.button("Submit", key=f"submit_{index}"):
                 add_comment(link, new_comment, s)
-                st.success("Comment added!")
+                
+
+def display_search_news(list_of_news, page_number):
+    items_per_page = 15
+    start_index = page_number * items_per_page
+    end_index = start_index + items_per_page
+    news_to_display = list_of_news[start_index:end_index]
+
+    for i, news in enumerate(news_to_display):
+        index = start_index + i
+        title = news.title.text if news.title else "No title"
+        link = news.link.text if news.link else "No link"
+        
+        st.write(f'**({index + 1}) {title}**')
+        st.markdown(f"[Read more...]({link})")
 
 def fetch_real_breaking_news():
     url = f'https://newsapi.org/v2/top-headlines?country=us&apiKey={NEWS_API_KEY}'
@@ -238,7 +253,7 @@ def load_comments(article_url):
         st.error(f"Error loading comments: {e}")
         return []
 
-def main():
+def main(s):
     if 'saved_articles' not in st.session_state:
         st.session_state['saved_articles'] = []
 
@@ -312,7 +327,7 @@ def main():
             news_list = fetch_rss_feed(f"https://news.google.com/rss/search?q={user_topic_pr}&hl=en-IN&gl=IN&ceid=IN:en")
             if news_list:
                 st.subheader(f"🔍 Here are some {user_topic.capitalize()} news for you")
-                display_news(news_list, st.session_state['page_number'], language_code[language], st.session_state['username'])
+                display_search_news(news_list, st.session_state['page_number'])
             else:
                 st.error(f"No news found for {user_topic}")
         else:
@@ -329,5 +344,3 @@ def main():
 
     load_saved_articles()
 
-if __name__ == "__main__":
-    main()
