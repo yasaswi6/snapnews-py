@@ -16,8 +16,6 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize, sent_tokenize
 
-nltk.download('punkt')
-nltk.download('stopwords')
 
 if 'saved_articles' not in st.session_state:
     st.session_state['saved_articles'] = []
