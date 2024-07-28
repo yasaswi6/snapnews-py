@@ -13,10 +13,17 @@ import os
 import pandas as pd
 import csv
 import nltk
-nltk.download('punkt')
-nltk.download('stopwords')
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize, sent_tokenize
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt', quiet=True)
+
+try:
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('stopwords', quiet=True)
 
 
 if 'saved_articles' not in st.session_state:
