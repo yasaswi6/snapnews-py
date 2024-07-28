@@ -9,12 +9,15 @@ import base64
 import random
 import requests
 import re
+import os
 import pandas as pd
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
+import hashlib
+import csv
 
-st.set_page_config(page_title='SnapNews🇸🇬: News Anytime, Anywhere', page_icon='snap.png')
+
 
 if 'saved_articles' not in st.session_state:
     st.session_state['saved_articles'] = []
@@ -27,6 +30,7 @@ if 'page_number' not in st.session_state:
 
 NEWS_API_KEY = 'ec48b2493593467a8947d0253d2786a2'
 COMMENTS_CSV = 'comments.csv'
+USERS_CSV = 'users.csv'
 
 def fetch_rss_feed(url):
     try:
@@ -113,7 +117,7 @@ def extract_article_text(url):
             st.error(f"BeautifulSoup failed to extract article: {e}")
             return None, 'snap.png'
 
-def display_news(list_of_news, page_number, language):
+def display_news(list_of_news, page_number, language, s):
     from googletrans import Translator
     translator = Translator()
     items_per_page = 5
@@ -182,7 +186,7 @@ def display_news(list_of_news, page_number, language):
                 st.write(f"{comment['username']}: {comment['comment']}")
             new_comment = st.text_area(f"Add a comment for article {index + 1}", key=f"comment_{index}")
             if st.button("Submit", key=f"submit_{index}"):
-                add_comment(link, new_comment)
+                add_comment(link, new_comment, s)
                 st.success("Comment added!")
                 st.experimental_rerun()
 
@@ -202,27 +206,61 @@ def simulate_notifications():
 def remove_emojis(input_string):
     return re.sub(r'[^\w\s,]', '', input_string)
 
-def load_comments(article_url):
-    try:
-        comments_df = pd.read_csv(COMMENTS_CSV)
-        article_comments = comments_df[comments_df['article_url'] == article_url]
-        return article_comments.to_dict('records')
-    except Exception as e:
-        st.error(f"Error loading comments: {e}")
-        return []
+import csv
 
 def add_comment(article_url, comment, username="Anonymous"):
     try:
-        new_comment = pd.DataFrame([{"article_url": article_url, "comment": comment, "username": username}])
-        comments_df = pd.read_csv(COMMENTS_CSV)
-        comments_df = comments_df.append(new_comment, ignore_index=True)
-        comments_df.to_csv(COMMENTS_CSV, index=False)
-    except FileNotFoundError:
-        new_comment.to_csv(COMMENTS_CSV, index=False)
+        if comment.strip() == "":
+            st.error("Comment cannot be empty")
+            return
+
+        new_comment = {"article_url": article_url, "comment": comment, "username": username}
+
+        # Read existing comments
+        if os.path.exists(COMMENTS_CSV):
+            with open(COMMENTS_CSV, mode='r', newline='', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                comments = list(reader)
+        else:
+            comments = []
+
+        # Add new comment
+        comments.append(new_comment)
+
+        # Write updated comments back to the CSV
+        with open(COMMENTS_CSV, mode='w', newline='', encoding='utf-8') as file:
+            fieldnames = ["article_url", "comment", "username"]
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(comments)
+
+        st.success("Comment added successfully!")
+
     except Exception as e:
         st.error(f"Error saving comment: {e}")
+def load_comments(article_url):
+    try:
+        if os.path.exists(COMMENTS_CSV):
+            comments_df = pd.read_csv(COMMENTS_CSV)
+            article_comments = comments_df[comments_df['article_url'] == article_url]
+            return article_comments.to_dict('records')
+        else:
+            return []
+    except Exception as e:
+        st.error(f"Error loading comments: {e}")
+        return []
+        st.error(f"Error saving comment: {e}")
 
-def run():
+def main(s):
+ 
+    if 'saved_articles' not in st.session_state:
+        st.session_state['saved_articles'] = []
+
+    if 'saved_status' not in st.session_state:
+        st.session_state['saved_status'] = {}
+
+    if 'page_number' not in st.session_state:
+        st.session_state['page_number'] = 0
     st.markdown("<h1 style='text-align: center;'>SnapNews🇸🇬: News Anytime, Anywhere 🌍🕒</h1>", unsafe_allow_html=True)
     image = Image.open('snap.png')
 
@@ -254,7 +292,7 @@ def run():
     elif cat_op == category[1]:
         st.subheader("🔥 Hot News")
         news_list = fetch_rss_feed('https://www.yahoo.com/news/rss')
-        display_news(news_list, st.session_state['page_number'], language_code[language])
+        display_news(news_list, st.session_state['page_number'], language_code[language],s)
     elif cat_op == category[2]:
         av_topics = ['Choose Topic', '💼 Business', '💻 Tech', '⚖️ Politics', '🌍 World', '⚽ Sports']
         st.subheader("💙 Top Picks")
@@ -275,7 +313,7 @@ def run():
             
             if news_list:
                 st.subheader(f"💙 Here are some {chosen_topic.split()[-1]} news for you")
-                display_news(news_list, st.session_state['page_number'], language_code[language])
+                display_news(news_list, st.session_state['page_number'], language_code[language],s)
             else:
                 st.error(f"No news found for {chosen_topic}")
 
@@ -287,7 +325,7 @@ def run():
             news_list = fetch_rss_feed(f"https://news.google.com/rss/search?q={user_topic_pr}&hl=en-IN&gl=IN&ceid=IN:en")
             if news_list:
                 st.subheader(f"🔍 Here are some {user_topic.capitalize()} news for you")
-                display_news(news_list, st.session_state['page_number'], language_code[language])
+                display_news(news_list, st.session_state['page_number'], language_code[language],s)
             else:
                 st.error(f"No news found for {user_topic}")
         else:
@@ -306,4 +344,5 @@ def run():
 
     load_saved_articles()
 
-run()
+if __name__ == "__main__":
+    main()

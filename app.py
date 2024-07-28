@@ -1,60 +1,70 @@
 import streamlit as st
-import os
+import firebase_admin
+from firebase_admin import credentials, auth
 
-# Constants
-USER_DATA_FILE = 'user_data.csv'
+st.set_page_config(page_title='SnapNews🇸🇬: News Anytime, Anywhere', page_icon='snap.png')
 
-# Function to load user data
-def load_user_data():
-    if os.path.exists(USER_DATA_FILE):
-        return pd.read_csv(USER_DATA_FILE)
-    else:
-        return pd.DataFrame(columns=['username', 'password'])
+# Initialize Firebase Admin SDK
+if not firebase_admin._apps:
+    cred = credentials.Certificate('snapnews-43720-firebase-adminsdk-dk2m1-2a95e02a22.json')
+    firebase_admin.initialize_app(cred)
 
-# Function to save user data
-def save_user_data(data):
-    data.to_csv(USER_DATA_FILE, index=False)
+def login():
+    st.title('Welcome to SnapNews')
 
-# Define pages
-def login_page():
-    st.title('Login and Registration System with Google')
+    choice = st.selectbox('Login/Sign Up', ['Login', 'Sign Up'])
 
-    # Google login button (placeholder for actual implementation)
+    if choice == 'Login':
+        email = st.text_input('Email Address')
+        password = st.text_input('Password', type='password')
+
+        if st.button('Login'):
+            try:
+                user = auth.get_user_by_email(email)
+                st.success(f'Login Successful for {user.email}')
+                st.session_state['logged_in'] = True
+                st.session_state['username'] = user.display_name if user.display_name else user.email
+                st.session_state['current_page'] = 'page1'
+                st.experimental_rerun()  # Reload the app to show the main content
+            except firebase_admin.auth.UserNotFoundError:
+                st.warning('Login Failed: User not found.')
+            except Exception as e:
+                st.error(f'Error: {str(e)}')
+
+    elif choice == 'Sign Up':
+        email = st.text_input('Email Address')
+        password = st.text_input('Password', type='password')
+        username = st.text_input('Enter your unique username')
+
+        if st.button('Create my account'):
+            try:
+                user = auth.create_user(
+                    email=email,
+                    password=password,
+                    display_name=username
+                )
+                st.success('Account created successfully!')
+                st.markdown('Please login using your email and password')
+                st.balloons()
+            except Exception as e:
+                st.error(f'Error: {str(e)}')
+
+def main():
     if 'logged_in' not in st.session_state:
         st.session_state['logged_in'] = False
 
-    if st.button('Login with Google'):
-        # Implement Google login here (This is a placeholder)
-        st.session_state['logged_in'] = True
-        st.session_state['user'] = {
-            'name': 'John Doe',
-            'email': 'john.doe@example.com',
-            'picture': 'https://via.placeholder.com/100'
-        }
+    if 'current_page' not in st.session_state:
+        st.session_state['current_page'] = 'login'
 
-    if st.session_state['logged_in']:
-        user = st.session_state['user']
-        st.success(f'Welcome {user["name"]} ({user["email"]})')
-        st.image(user['picture'], width=100)
-        if st.button('Logout'):
-            st.session_state['logged_in'] = False
-            st.session_state['user'] = None
-        if st.button('Go to News Application'):
-            st.session_state['page'] = 'news_page'
-    else:
-        st.warning('Please log in using Google.')
+    if st.session_state['current_page'] == 'login':
+        login()
+    elif st.session_state['current_page'] == 'page1':
+        page1()
 
-# Main App
-def main():
-    # Initialize session state for navigation
-    if 'page' not in st.session_state:
-        st.session_state['page'] = 'login_page'
+def page1():
+    import page1
+    page1.main(st.session_state['username'])
     
-    # Render the appropriate page
-    if st.session_state['page'] == 'login_page':
-        login_page()
-    elif st.session_state['page'] == 'news_page':
-        st.experimental_rerun('/pages/page1')
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
